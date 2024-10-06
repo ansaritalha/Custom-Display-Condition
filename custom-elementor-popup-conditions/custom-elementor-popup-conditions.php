@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: Custom Popup Display Condition
-Description: assign Elementor popups based on custom display values, and display them dynamically on pages based on custom meta boc value.
+Description: assign Elementor popups based on custom display values, and display them dynamically on pages based on custom meta box value.
 Version: 1.0
 Author: Talha Ansari
 */
@@ -31,10 +31,21 @@ function cfpm_render_custom_field_page() {
     // Handle form submission for adding new field
     if (isset($_POST['cfpm_add_field'])) {
         $new_field = sanitize_text_field($_POST['cfpm_field_name']);
-        if (!empty($new_field)) {
+        // Check if the new brand already exists (case-insensitive)
+        $exists = false;
+        foreach ($custom_fields as $field) {
+            if (strtolower($field) === strtolower($new_field)) {
+                $exists = true;
+                break;
+            }
+        }
+
+        if ($exists) {
+            echo '<div class="notice notice-error is-dismissible"><p>Brand already exists!</p></div>';
+        } elseif (!empty($new_field)) {
             $custom_fields[] = $new_field;
             update_option('cfpm_custom_fields', $custom_fields);
-            echo '<div class="notice notice-success is-dismissible"><p>Custom field added successfully!</p></div>';
+            echo '<div class="notice notice-success is-dismissible"><p>Brand field added successfully!</p></div>';
         }
     }
 
@@ -44,7 +55,30 @@ function cfpm_render_custom_field_page() {
         if (($key = array_search($field_to_delete, $custom_fields)) !== false) {
             unset($custom_fields[$key]);
             update_option('cfpm_custom_fields', $custom_fields);
-            echo '<div class="notice notice-success is-dismissible"><p>Custom field deleted successfully!</p></div>';
+            echo '<div class="notice notice-success is-dismissible"><p>Brand field deleted successfully!</p></div>';
+        }
+    }
+
+    // Handle edit option
+    if (isset($_POST['cfpm_edit_field'])) {
+        $field_to_edit = sanitize_text_field($_POST['cfpm_field_to_edit']);
+        $new_field_name = sanitize_text_field($_POST['cfpm_new_field_name']);
+        
+        // Check if the new name already exists (case-insensitive)
+        $exists = false;
+        foreach ($custom_fields as $field) {
+            if (strtolower($field) === strtolower($new_field_name)) {
+                $exists = true;
+                break;
+            }
+        }
+
+        if ($exists) {
+            echo '<div class="notice notice-error is-dismissible"><p>Brand already exists!</p></div>';
+        } elseif (($key = array_search($field_to_edit, $custom_fields)) !== false && !empty($new_field_name)) {
+            $custom_fields[$key] = $new_field_name;
+            update_option('cfpm_custom_fields', $custom_fields);
+            echo '<div class="notice notice-success is-dismissible"><p>Brand field updated successfully!</p></div>';
         }
     }
 
@@ -64,7 +98,18 @@ function cfpm_render_custom_field_page() {
             <ul class="cfpm-custom-fields">
                 <?php foreach ($custom_fields as $field) : ?>
                     <li class="cfpm-field-item">
-                        <?php echo esc_html($field); ?>
+                        <span class="cfpm-field-text"><?php echo esc_html($field); ?></span>
+
+                        <!-- Edit button to toggle input field -->
+                        <button type="button" class="button button-secondary cfpm-edit-btn" data-field="<?php echo esc_attr($field); ?>">Edit</button>
+                        
+                        <!-- Hidden form for editing the field -->
+                        <form method="post" class="cfpm-edit-form" style="display:none;">
+                            <input type="hidden" name="cfpm_field_to_edit" value="<?php echo esc_attr($field); ?>">
+                            <input type="text" name="cfpm_new_field_name" value="<?php echo esc_attr($field); ?>" class="regular-text" required>
+                            <button type="submit" name="cfpm_edit_field" class="button button-primary">Update</button>
+                        </form>
+
                         <form method="post" style="display:inline;">
                             <input type="hidden" name="cfpm_field_to_delete" value="<?php echo esc_attr($field); ?>">
                             <button type="submit" name="cfpm_delete_field" class="button button-secondary">Delete</button>
@@ -99,12 +144,38 @@ function cfpm_render_custom_field_page() {
             padding: 10px;
             border-bottom: 1px solid #eaeaea;
         }
-        .cfpm-field-item:last-child {
-            border-bottom: none;
+        .cfpm-field-item span {
+            flex-grow: 1;
+        }
+        .cfpm-edit-btn {
+            margin-right: 10px!important;
         }
     </style>
+
+    <script>
+        // JavaScript to handle toggling the edit form
+        document.querySelectorAll('.cfpm-edit-btn').forEach(function(button) {
+            button.addEventListener('click', function() {
+                var parent = button.closest('.cfpm-field-item');
+                var editForm = parent.querySelector('.cfpm-edit-form');
+                var textSpan = parent.querySelector('.cfpm-field-text');
+
+                // Toggle the form and the text display
+                if (editForm.style.display === 'none') {
+                    editForm.style.display = 'flex';
+                    textSpan.style.display = 'none';
+                    button.textContent = 'Cancel';
+                } else {
+                    editForm.style.display = 'none';
+                    textSpan.style.display = 'inline';
+                    button.textContent = 'Edit';
+                }
+            });
+        });
+    </script>
     <?php
 }
+
 
 // ====================== POPUP ASSIGNMENT MANAGEMENT ======================
 
