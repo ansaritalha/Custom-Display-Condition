@@ -350,3 +350,22 @@ function cfpm_register_custom_popup_condition($conditions_manager) {
     $conditions_manager->get_condition('general')->register_sub_condition(new \CFPM_Custom_Popup_Condition());
 }
 add_action('elementor/theme/register_conditions', 'cfpm_register_custom_popup_condition');
+
+function prefix_contact_form_custom_js() {
+    ?>
+    <script>
+        jQuery(document).on('elementor/popup/show', function() {
+            jQuery('.elementor-popup-modal .wpcf7-form').each(function(index, form) {
+                // Initialize each form individually within the popup modal
+                wpcf7.init(form);
+
+                // Check if the Conditional Fields plugin is present and initialize it as well
+                if (typeof wpcf7cf !== 'undefined') {
+                    wpcf7cf.initForm(jQuery(form));
+                }
+            });
+        });
+    </script>
+    <?php 
+}
+add_action('wp_footer', 'prefix_contact_form_custom_js', 100);
